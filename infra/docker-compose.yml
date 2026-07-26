@@ -1,0 +1,43 @@
+# Postgres with PostGIS and pgvector, plus Redis. Both are open source and
+# self hosted; nothing here depends on a managed service.
+#
+# Docker is not installed on every machine. If you do not have it, install
+# PostgreSQL 16 with the postgis and pgvector extensions locally and point
+# DATABASE_URL at it instead. The application does not care which you use.
+
+services:
+  db:
+    # This image ships PostGIS and pgvector together, which saves compiling
+    # pgvector against the PostGIS image by hand.
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: aegis
+      POSTGRES_PASSWORD: aegis
+      POSTGRES_DB: aegis
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aegis -d aegis"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db_data:
+  redis_data:

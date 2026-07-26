@@ -1,0 +1,48 @@
+[project]
+name = "aegis-backend"
+version = "0.1.0"
+description = "AEGIS — venue operations layer for crowd emergencies"
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy>=2.0.36",
+    "alembic>=1.14",
+    "psycopg[binary]>=3.2",
+    "geoalchemy2>=0.15",
+    "pgvector>=0.3",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "python-jose[cryptography]>=3.3",   # JWT
+    "passlib[bcrypt]>=1.7",             # password hashing
+    "python-multipart>=0.0.12",         # file upload
+    "redis>=5.2",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+    "mypy>=1.13",
+]
+# Installed separately, and only on Python 3.11/3.12 — see ROADMAP Phase 2.
+ml = [
+    "sentence-transformers>=3.3",
+    "torch>=2.5",
+    "scikit-learn>=1.5",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
