@@ -36,6 +36,15 @@ ml = [
     "scikit-learn>=1.5",
 ]
 
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# Without this, setuptools' flat-layout discovery trips over alembic/ and
+# tests/ sitting alongside app/ and refuses to build.
+[tool.setuptools]
+packages = ["app"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
