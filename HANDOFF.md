@@ -212,7 +212,8 @@ Three reasons, in order of importance:
 
 ## Where it lives
 
-**`github.com/developwithsourav/aegis`** — public, MIT. Local at `G:\Claude\aegis`.
+**`github.com/developwithsourav/aidly`** — public, MIT. Local at `G:\Claude\Projects\aegis`. The repository was renamed
+from `aegis` when the project took the name Aidly. The folder still carries the old name.
 
 ## Stack, and why each piece
 
