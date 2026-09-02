@@ -26,7 +26,10 @@ from report_visuals import (  # noqa: E402
     notation_legend, module_architecture)
 
 SP = os.path.dirname(os.path.abspath(__file__))
-OUT = r"G:\Claude\Projects\aegis\docs\Aidly_SE_Report.pdf"
+# report_src sits inside docs/, so the outputs go to its parent. Derived
+# rather than hardcoded, so renaming the project folder cannot break it.
+DOCS = os.path.dirname(SP)
+OUT = os.path.join(DOCS, "Aidly_SE_Report.pdf")
 
 INK = HexColor("#111111")
 SOFT = HexColor("#444444")

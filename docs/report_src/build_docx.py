@@ -18,8 +18,11 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
 SP = os.path.dirname(os.path.abspath(__file__))
+# report_src sits inside docs/, so the outputs go to its parent. Derived
+# rather than hardcoded, so renaming the project folder cannot break it.
+DOCS = os.path.dirname(SP)
 sys.path.insert(0, SP)
-OUT = r"G:\Claude\Projects\aegis\docs\Aidly_SE_Report.docx"
+OUT = os.path.join(DOCS, "Aidly_SE_Report.docx")
 IMGDIR = os.path.join(SP, "docximg")
 os.makedirs(IMGDIR, exist_ok=True)
 

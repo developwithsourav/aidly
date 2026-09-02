@@ -3,12 +3,18 @@
 Renders every page and finds the lowest non white pixel above the footer rule,
 which is a truer measure of wasted space than a word count.
 """
+import os
 import sys
 import pypdfium2 as pdfium
 from PIL import Image
 
+SP = os.path.dirname(os.path.abspath(__file__))
+# report_src sits inside docs/, so the outputs go to its parent. Derived
+# rather than hardcoded, so renaming the project folder cannot break it.
+DOCS = os.path.dirname(SP)
+
 PDF = sys.argv[1] if len(sys.argv) > 1 else \
-    r"G:\Claude\Projects\aegis\docs\Aidly_SE_Report.pdf"
+    os.path.join(DOCS, "Aidly_SE_Report.pdf")
 
 doc = pdfium.PdfDocument(PDF)
 print("pages:", len(doc))

@@ -1,10 +1,16 @@
 """Second pass: what the rendered PDF actually contains, page by page."""
+import os
 import re
 from collections import defaultdict
 
 from pypdf import PdfReader
 
-PDF = r"G:\Claude\Projects\aegis\docs\Aidly_SE_Report.pdf"
+SP = os.path.dirname(os.path.abspath(__file__))
+# report_src sits inside docs/, so the outputs go to its parent. Derived
+# rather than hardcoded, so renaming the project folder cannot break it.
+DOCS = os.path.dirname(SP)
+
+PDF = os.path.join(DOCS, "Aidly_SE_Report.pdf")
 r = PdfReader(PDF)
 pages = [(p.extract_text() or "") for p in r.pages]
 print("pages:", len(pages))

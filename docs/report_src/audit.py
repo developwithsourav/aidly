@@ -10,7 +10,10 @@ import sys
 from collections import defaultdict
 
 SP = os.path.dirname(os.path.abspath(__file__))
-PDF = r"G:\Claude\Projects\aegis\docs\Aidly_SE_Report.pdf"
+# report_src sits inside docs/, so the outputs go to its parent. Derived
+# rather than hardcoded, so renaming the project folder cannot break it.
+DOCS = os.path.dirname(SP)
+PDF = os.path.join(DOCS, "Aidly_SE_Report.pdf")
 
 body = open(os.path.join(SP, "report_body.py"), encoding="utf-8").read()
 front = open(os.path.join(SP, "report_front.py"), encoding="utf-8").read()
