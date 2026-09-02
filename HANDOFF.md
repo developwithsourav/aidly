@@ -9,6 +9,11 @@ be given. Read the whole file first anyway. The most important parts are
 
 ---
 
+> **Credentials are never written in this repository.** They belong in the
+> environment, or in a password manager. An earlier revision of this file did
+> contain them, so anything that was listed here should be treated as exposed
+> and rotated.
+
 # 1. What AEGIS is
 
 A **venue operations layer for crowd emergencies**.
@@ -94,8 +99,8 @@ Live at time of writing (may not persist, these are third-party accounts):
 | Routes | `/` reporter · `/command` operator · `/responder` staff |
 | Convex backend | deployment `judicious-oyster-529`, team `sourav-741ab` |
 | Convex account | souravkumar.coder@gmail.com |
-| Operator login | `control@aegis.live` / `NinjaCommand2026` |
-| Responder passcode | `AEGIS26` |
+| Operator login | `control@aegis.live`, password held outside this repository |
+| Responder passcode | held outside this repository |
 
 Those credentials are **not** in either repository, on purpose. They are here
 because this file is for you.
@@ -313,61 +318,47 @@ screen**. The hackathon build did this and it was genuinely admired. Keep it.
 
 Be precise about this. Do not assume more is done than is.
 
-## Done
+## Done and verified against a real database
 
-- Repository, MIT licence, README, ROADMAP, docs/decisions.md
-- `models.py` — full schema: venues, zones, users, responders, incidents,
-  reports, events, protocols, broadcasts. PostGIS geography columns, pgvector
-  embedding column, dedup and dispatch indexes, check constraints.
-- `config.py` — pydantic-settings, refuses placeholder JWT secret
-- `db.py` — engine, session dependency
-- `services/ingest.py` — zone resolution, de-duplication, report intake
-- `services/dispatch.py` — nearest role-matched dispatch, accept, on-scene,
-  resolve, escalation
-- Python 3.12.10 virtualenv at `backend/.venv`, dependencies installed
-- **PostgreSQL 18 + PostGIS 3.6.2 + pgvector 0.8.1 + Redis 8 running inside
-  WSL Ubuntu 26.04**, database `aegis`, role `aegis` password `aegis`
+- Alembic set up. `alembic upgrade head` builds the schema from nothing,
+  installs PostGIS and pgvector, and the down and up round trip is tested.
+- **Increment I, authentication.** bcrypt hashing, signed tokens carrying the
+  role, one failure message for every cause, and the account reloaded on each
+  request so deactivating a user takes effect immediately.
+- **Increment II, report intake.** Public reporting with no account. Zone from
+  the device position, else a gate the reporter picks, else the venue centre.
+  De-duplication by category, zone and time window with a corroboration count.
+  Operator feed scoped to the operator's own venue.
+- **Increment III in part, triage.** Deterministic rules assign a priority and
+  write the reason into the trail. Handles code mixed Hindi and English.
+  `severity_probability` stays null: a rule is not a calibrated probability.
+- **Increment IV, dispatch.** Nearest available responder whose role matches
+  the category, chosen by a PostGIS distance query. Acknowledgement, arrival
+  and resolution. Resolving returns the unit to the pool. Escalation runs on a
+  timer inside the application and is idempotent.
+- `scripts/seed_demo.py` brings up a venue with zones, responders and accounts.
+- **59 tests**, all against PostgreSQL with PostGIS. No mocked database.
 
 ## Not started
 
-- Alembic migrations — **the schema has never been created in a database**
-- `main.py`, any router, any endpoint
-- WebSocket hub
-- Auth implementation (models exist, logic does not)
-- Photo storage
-- Frontend — nothing at all
-- ML — nothing at all
-- Tests — nothing at all
-
-## Known open problem
-
-**Postgres in WSL is not reachable from Windows yet.** Connecting from the
-Windows venv to `localhost:5432` times out. Likely one of:
-
-- Postgres bound only to `127.0.0.1` inside WSL. Set
-  `listen_addresses = '*'` in `/etc/postgresql/18/main/postgresql.conf` and add
-  a `host all all 0.0.0.0/0 scram-sha-256` line to `pg_hba.conf`, then restart.
-- Windows firewall blocking the forwarded port.
-- WSL2 localhost forwarding not applying; get the WSL IP with
-  `wsl hostname -I` and connect to that instead of localhost.
-
-**Simplest alternative:** run the backend *inside* WSL too. Then everything is
-on one Linux host and the question disappears. Given the ML work is easier on
-Linux anyway, this is probably the right move.
-
-**Docker was abandoned on purpose.** Docker Desktop crashed on startup with an
-Inference manager error (it tries to create a Unix socket at a Windows path).
-Disabling the AI features in `settings-store.json` did not fix it and
-`docker info` hung indefinitely. Native Postgres in WSL was faster and is
-working. `infra/docker-compose.yml` is kept for anyone who does have Docker.
+- Trained severity classifier. There is no labelled data, which is the real
+  blocker, not the model. Rules are the baseline it has to beat.
+- Protocol retrieval for the "what to do next" guidance. The `protocols` table
+  and its pgvector column exist and hold zero rows.
+- Broadcast, discreet reporting, photo storage, evidence chain of custody.
+- WebSocket hub. Screens would have to poll today.
+- Any frontend beyond the sign in page.
 
 ## Environment notes
 
-- **Python 3.14 is installed and is the system default. Do not use it.**
-  PyTorch and transformers publish no wheels for it. Use `py -3.12`.
-- The venv at `backend/.venv` is already 3.12.
+- **Python 3.14 is the system default. Do not use it** for the machine learning
+  work: PyTorch and transformers publish no wheels for it. Use `py -3.12`.
+- Postgres runs in WSL. `localhost` forwarding from Windows does not work, but
+  **the WSL IP does**. Get it with `wsl hostname -I`. This was the blocker
+  recorded in earlier revisions of this file and it has a workaround now.
+- Docker was abandoned on purpose. `infra/docker-compose.yml` is kept for
+  anyone who does have it working.
 
----
 
 # 8. Roadmap
 

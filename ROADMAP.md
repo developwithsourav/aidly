@@ -10,16 +10,18 @@ a working state.
 Replace the managed backend with a stack that runs anywhere.
 
 - [x] Repository, licence, layout
-- [ ] SQLAlchemy models: venues, zones, responders, reports, incidents, events,
+- [x] SQLAlchemy models: venues, zones, responders, reports, incidents, events,
       protocols, broadcasts, users
-- [ ] Alembic migrations, PostGIS and pgvector enabled
-- [ ] Report ingestion, with de-duplication by category, zone and time window
-- [ ] Dispatch: nearest available responder whose role matches the category
-- [ ] Escalation: unacknowledged P1 escalates on a timer
-- [ ] Append only audit trail per incident
+- [x] Alembic migrations, PostGIS and pgvector enabled, up and down verified
+- [x] Report ingestion, with de-duplication by category, zone and time window
+- [x] Dispatch: nearest available responder whose role matches the category
+- [x] Escalation: unacknowledged P1 escalates on a timer
+- [x] Append only audit trail per incident
 - [ ] WebSocket hub so every screen stays live without polling
 - [ ] Photo upload to local or S3 compatible storage
 - [ ] Next.js frontend for the three roles
+- [x] Authentication: bcrypt hashing, signed tokens, role checks
+- [x] Rules based triage, with the reason written to the trail
 - [ ] End to end test that mirrors the hackathon demo run
 
 **Done when** the full demo flow works against the new stack with no managed

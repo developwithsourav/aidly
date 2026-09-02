@@ -45,6 +45,7 @@ class Category(str, enum.Enum):
     crowd = "crowd"
     accident = "accident"
     violence = "violence"
+    harassment = "harassment"
     other = "other"
 
 
@@ -99,7 +100,8 @@ class Zone(Base, PkMixin):
 
     venue: Mapped[Venue] = relationship(back_populates="zones")
 
-    __table_args__ = (Index("ix_zones_location", "location", postgresql_using="gist"),)
+    # No explicit spatial index: geoalchemy2 creates one for a Geography
+    # column already, and a second identical GiST index only costs writes.
 
 
 # ── people ───────────────────────────────────────────────────────────────
@@ -130,7 +132,6 @@ class Responder(Base, PkMixin):
     venue: Mapped[Venue] = relationship(back_populates="responders")
 
     __table_args__ = (
-        Index("ix_responders_location", "location", postgresql_using="gist"),
         Index("ix_responders_dispatch", "venue_id", "role", "is_available"),
     )
 
@@ -175,7 +176,6 @@ class Incident(Base, PkMixin):
         CheckConstraint(
             "severity_probability IS NULL OR (severity_probability >= 0 AND severity_probability <= 1)",
             name="ck_incidents_severity_probability"),
-        Index("ix_incidents_location", "location", postgresql_using="gist"),
         # the de-duplication lookup: same venue, category and zone, recent
         Index("ix_incidents_dedup", "venue_id", "category", "zone_id", "created_at"),
     )

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aidly Control Room Sign In</title>
+<style>
+  :root{
+    --ink:#0E1116; --panel:#FFFFFF; --line:#C9CFD6; --muted:#5B6470;
+    --accent:#111820; --ok:#0B6B3A; --bad:#A3121A; --field:#F4F6F8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.5 "Segoe UI",system-ui,sans-serif;color:var(--ink);
+       background:var(--ink);display:flex;align-items:center;justify-content:center;
+       min-height:100vh;padding:24px}
+  .wrap{width:100%;max-width:430px}
+  .brand{text-align:center;margin-bottom:22px}
+  .mark{width:52px;height:52px;margin:0 auto 12px;border:2.5px solid #fff;
+        border-radius:14px;display:flex;align-items:center;justify-content:center}
+  .mark span{font-weight:800;font-size:24px;color:#fff;letter-spacing:.02em}
+  .brand h1{margin:0;font-size:26px;letter-spacing:.22em;color:#fff;font-weight:800}
+  .brand p{margin:6px 0 0;color:#9AA4B0;font-size:13px;letter-spacing:.04em}
+  .card{background:var(--panel);border-radius:12px;padding:28px 26px 24px;
+        box-shadow:0 18px 48px rgba(0,0,0,.45)}
+  .card h2{margin:0 0 4px;font-size:19px;font-weight:700}
+  .card .sub{margin:0 0 20px;color:var(--muted);font-size:13.5px}
+  label{display:block;font-size:11.5px;font-weight:700;letter-spacing:.09em;
+        text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+  input{width:100%;padding:12px 13px;border:1.5px solid var(--line);border-radius:8px;
+        font-size:15px;background:var(--field);color:var(--ink);font-family:inherit}
+  input:focus{outline:none;border-color:var(--accent);background:#fff}
+  .field{margin-bottom:16px}
+  button{width:100%;padding:13px;border:0;border-radius:8px;background:var(--accent);
+         color:#fff;font-size:14.5px;font-weight:700;letter-spacing:.1em;cursor:pointer}
+  button:disabled{opacity:.55}
+  .out{margin-top:18px;border-radius:8px;padding:14px 15px;font-size:13px;display:none}
+  .out.show{display:block}
+  .out.ok{background:#EAF4EE;border:1.5px solid var(--ok);color:#0A4527}
+  .out.bad{background:#FBECEC;border:1.5px solid var(--bad);color:#7A0D14}
+  .out h3{margin:0 0 8px;font-size:12px;letter-spacing:.09em;text-transform:uppercase}
+  .kv{display:grid;grid-template-columns:96px 1fr;gap:4px 10px;
+      font-family:Consolas,monospace;font-size:11.5px;word-break:break-all}
+  .kv b{font-weight:700}
+  .foot{margin-top:16px;text-align:center;color:#8A94A0;font-size:11.5px;
+        font-family:Consolas,monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="mark"><span>A</span></div>
+    <h1>AIDLY</h1>
+    <p>VENUE CONTROL ROOM</p>
+  </div>
+
+  <div class="card">
+    <h2>Sign in</h2>
+    <p class="sub">Authorised venue operators, responders and administrators.</p>
+    <form id="f" autocomplete="off">
+      <div class="field">
+        <label for="email">Email address</label>
+        <input id="email" type="email" value="control@arsd.example" required>
+      </div>
+      <div class="field">
+        <label for="pw">Password</label>
+        <input id="pw" type="password" placeholder="Enter your password" required>
+      </div>
+      <button id="b" type="submit">SIGN IN</button>
+    </form>
+    <div id="out" class="out"></div>
+  </div>
+
+  <div class="foot">POST /api/auth/login &rarr; PostgreSQL</div>
+</div>
+
+<script>
+const f = document.getElementById('f'), out = document.getElementById('out'),
+      b = document.getElementById('b');
+f.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  b.disabled = true; b.textContent = 'CHECKING...';
+  out.className = 'out';
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: email.value, password: pw.value})
+    });
+    const d = await r.json();
+    if (r.ok) {
+      const me = await (await fetch('/api/auth/me',
+        {headers: {Authorization: 'Bearer ' + d.access_token}})).json();
+      out.className = 'out show ok';
+      out.innerHTML = '<h3>Authenticated, status ' + r.status + '</h3><div class="kv">'
+        + '<b>account</b><span>' + me.display_name + '</span>'
+        + '<b>role</b><span>' + me.role + '</span>'
+        + '<b>expires in</b><span>' + d.expires_in + ' seconds</span>'
+        + '<b>token</b><span>' + d.access_token.slice(0, 64) + '...</span></div>';
+    } else {
+      out.className = 'out show bad';
+      out.innerHTML = '<h3>Rejected, status ' + r.status + '</h3><div>'
+        + (d.detail || 'Sign in failed') + '</div>';
+    }
+  } catch (err) {
+    out.className = 'out show bad';
+    out.innerHTML = '<h3>Server unreachable</h3><div>' + err.message + '</div>';
+  }
+  b.disabled = false; b.textContent = 'SIGN IN';
+});
+</script>
+</body>
+</html>

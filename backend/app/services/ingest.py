@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.models import Category, Event, Incident, Report, Status, Venue, Zone, utcnow
+from app.services import triage
 
 settings = get_settings()
 
@@ -103,9 +104,13 @@ def ingest_report(
     if lat is not None and lng is not None:
         location = _point(lat, lng)
     elif zone is not None:
-        location = zone.location
+        # Not zone.location. A geography read back from the database arrives as
+        # a WKB element, and re-inserting that would need Shapely to decode it
+        # in Python. Referring to the stored column keeps the value in the
+        # database, where it never has to be decoded at all.
+        location = select(Zone.location).where(Zone.id == zone.id).scalar_subquery()
     else:
-        location = venue.centre
+        location = select(Venue.centre).where(Venue.id == venue.id).scalar_subquery()
 
     existing = find_duplicate(db, venue.id, category, zone)
 
@@ -120,8 +125,23 @@ def ingest_report(
             incident_id=existing.id, actor="system",
             message=f"Duplicate report merged, now {existing.report_count} independent reports",
         ))
+
+        # A second witness is new evidence. Re-assess, but never below what an
+        # operator may already have raised it to by hand.
+        if existing.triage_source == "rules":
+            again = triage.assess(category, description, existing.report_count)
+            if again.priority < existing.priority:
+                was = existing.priority
+                existing.priority = again.priority
+                existing.headline = again.headline
+                db.add(Event(
+                    incident_id=existing.id, actor="system",
+                    message=f"Priority raised P{was} to P{again.priority}: {again.reason}",
+                ))
         db.flush()
         return existing, True
+
+    assessed = triage.assess(category, description, report_count=1)
 
     incident = Incident(
         venue_id=venue.id,
@@ -129,9 +149,11 @@ def ingest_report(
         category=category,
         status=Status.triaging,
         location=location,
-        headline=f"{category.value.title()} reported",
-        # priority stays at its default until triage runs. It is not a guess
-        # dressed up as a result, and severity_probability stays NULL.
+        priority=assessed.priority,
+        headline=assessed.headline,
+        triage_source="rules",
+        # severity_probability stays NULL. A rule is not a calibrated
+        # probability, and printing one would be a guess dressed as a result.
     )
     db.add(incident)
     db.flush()
@@ -142,5 +164,9 @@ def ingest_report(
         location=location, photo_key=photo_key, reporter_fingerprint=fingerprint,
     ))
     db.add(Event(incident_id=incident.id, actor="system", message="Report received"))
+    db.add(Event(
+        incident_id=incident.id, actor="system",
+        message=f"Triaged P{assessed.priority} by rules: {assessed.reason}",
+    ))
     db.flush()
     return incident, False

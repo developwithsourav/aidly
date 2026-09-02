@@ -8,11 +8,19 @@ from __future__ import annotations
 
 import uuid
 
+from datetime import timedelta
+
 from geoalchemy2.functions import ST_Distance
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.models import Category, Event, Incident, Responder, Role, Status, utcnow
+
+settings = get_settings()
+
+ESCALATION_MARK = "ESCALATED to control lead"
+WAITING = (Status.triaging, Status.verified)
 
 # Which capability each category wants. If none of that role is free we widen
 # to anyone available rather than leaving the incident unattended: a marshal who
@@ -22,6 +30,10 @@ PREFERRED_ROLE: dict[Category, Role] = {
     Category.fire: Role.fire,
     Category.crowd: Role.marshal,
     Category.violence: Role.security,
+    # Security for now. Matching on a responder attribute, so that a report of
+    # this kind can request a female responder, needs columns that do not exist
+    # yet and is part of Increment V.
+    Category.harassment: Role.security,
     Category.accident: Role.marshal,
 }
 
@@ -134,21 +146,61 @@ def resolve(db: Session, incident: Incident, actor: str = "operator") -> bool:
     return True
 
 
-def escalate_if_unhandled(db: Session, incident_id: uuid.UUID) -> bool:
-    """Called on a timer. A critical nobody has picked up must become loud.
+def already_escalated(db: Session, incident_id) -> bool:
+    """Has this incident been escalated once already?
 
-    Only escalates P1s that are still waiting: anything already dispatched has
-    a unit moving towards it and does not need the control lead woken up.
+    The sweep runs on a timer, so without this check every pass would append
+    another escalation event to the same incident and the audit trail would
+    describe an escalation storm that never happened.
+    """
+    return bool(db.execute(
+        select(exists().where(
+            Event.incident_id == incident_id,
+            Event.message.like(ESCALATION_MARK + "%"),
+        ))
+    ).scalar())
+
+
+def escalate_if_unhandled(db: Session, incident_id) -> bool:
+    """Escalate one incident if it is a P1 that nobody has picked up.
+
+    Only P1s that are still waiting: anything already dispatched has a unit
+    moving towards it and does not need the control lead woken up.
     """
     incident = db.get(Incident, incident_id)
     if incident is None:
         return False
-    if incident.priority != 1 or incident.status not in (Status.triaging, Status.verified):
+    if incident.priority != 1 or incident.status not in WAITING:
+        return False
+    if already_escalated(db, incident.id):
         return False
 
     db.add(Event(
         incident_id=incident.id, actor="system",
-        message="ESCALATED to control lead, P1 unacknowledged",
+        message=f"{ESCALATION_MARK}, P1 unacknowledged",
     ))
     db.flush()
     return True
+
+
+def escalation_sweep(db: Session) -> list[Incident]:
+    """Every P1 that has been waiting longer than the configured interval.
+
+    The elapsed time check lives here rather than in escalate_if_unhandled,
+    because "which incidents are overdue" is a query and "should this one
+    escalate" is a rule. Keeping them apart lets an operator escalate a single
+    incident by hand without waiting for the timer.
+    """
+    cutoff = utcnow() - timedelta(seconds=settings.escalation_seconds)
+    overdue = db.execute(
+        select(Incident).where(
+            Incident.priority == 1,
+            Incident.status.in_(WAITING),
+            Incident.created_at <= cutoff,
+        )
+    ).scalars().all()
+
+    escalated = [i for i in overdue if escalate_if_unhandled(db, i.id)]
+    if escalated:
+        db.commit()
+    return escalated
