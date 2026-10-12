@@ -98,7 +98,7 @@ Live at time of writing (may not persist, these are third-party accounts):
 | App | `https://490cbec14e504e7aa506bc0208460713.prod.enterapp.pro` |
 | Routes | `/` reporter · `/command` operator · `/responder` staff |
 | Convex backend | deployment `judicious-oyster-529`, team `sourav-741ab` |
-| Convex account | souravkumar.coder@gmail.com |
+| Convex account | held outside this repository |
 | Operator login | `control@aegis.live`, password held outside this repository |
 | Responder passcode | held outside this repository |
 
